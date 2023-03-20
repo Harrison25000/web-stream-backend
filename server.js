@@ -1,10 +1,16 @@
 const express = require("express");
+const bodyParser = require('body-parser');
+const moment = require('moment');
 const cors = require('cors')
 const app = express();
 const path = require('path')
+const fs = require('fs');
 var router = express.Router();
 
 app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(function (req, res, next) {
 
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -82,6 +88,44 @@ app.get('/setwatcher', (req, res) => {
 app.get('/removewatcher', (req, res) => {
     watchersCount--;
     res.send({ count: watchersCount, status: "ok", message: "removed watcher" });
+});
+
+app.post('/savecomment', (req, res) => {
+    const content = req.body.post;
+    let date = moment();
+    let dateStr = date.format("YY-MM-DD HH:mm:ss");
+    content.time = dateStr;
+
+    fs.readFile('comments.json', 'utf8', function readFileCallback(err, data) {
+        if (err) {
+            console.log(err);
+            res.send({ status: "error", message: "failed to save comment" });
+        } else {
+            obj = JSON.parse(data); //now it an object
+            obj.push(content); //add some data
+            json = JSON.stringify(obj); //convert it back to json
+            fs.writeFile('comments.json', json, 'utf8', function readFileCallback(error, data2) {
+                if (error) {
+                    console.log(error);
+                } else {
+                    res.send({ status: "ok", message: "comment saved" });
+                }
+            }); // write it back 
+        }
+    });
+});
+
+app.get('/getcomments', (req, res) => {
+    fs.readFile('comments.json', 'utf8', function readFileCallback(err, data) {
+        if (err) {
+            console.log(err);
+            res.send({ status: "error", message: "failed to read comments file" });
+        } else {
+            obj = JSON.parse(data); //now it an object
+            json = JSON.stringify(obj); //convert it back to json
+            res.send({ comments: json, status: "ok", message: "retrieved comments" });
+        }
+    });
 });
 // AFTER defining routes: Anything that doesn't match what's above, send back index.html; (the beginning slash ('/') in the string is important!)
 // app.get('*', (req, res) => {
